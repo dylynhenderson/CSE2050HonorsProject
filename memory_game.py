@@ -4,7 +4,7 @@ colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'teal']
 gridSize = 16
 startingScore = 20
 
-class memorygame:
+class MemoryGame:
     '''Initialize memory game class'''
     def __init__(self):
         self.colors  = []
@@ -21,6 +21,8 @@ class memorygame:
 
     def selectCard(self, index: int) -> str:
         '''Select a card at the given index'''
+        if self.gameOver:
+            return 'Game Over'
         if index in self.matched:
             return 'Card already matched'
         if index in self.flipped:
