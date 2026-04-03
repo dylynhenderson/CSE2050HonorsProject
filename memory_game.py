@@ -90,7 +90,7 @@ class MemoryGameGUI:
         self.root.title("Memory Matching Game")
         self.root.resizable(False, False)
         self.game = MemoryGame()
-        self.buttons = []
+        self.cards = []
         self.locked = False
         self.buildUI()
 
@@ -106,19 +106,20 @@ class MemoryGameGUI:
         for i in range(gridSize):
             row = (i // 4) + 1
             col = i % 4
-            button = tk.Button(
+            card = tk.Label(
                 self.root,
-                text='',
+                text='?',
                 width=8,
                 height=4,
                 bg='gray',
                 fg='white',
                 font=('Arial', 12, 'bold'),
                 relief=tk.RAISED,
-                command=lambda idx=i: self.onCardClick(idx)
+                cursor='hand2'
             )
-            button.grid(row=row, column=col, padx=6, pady=6)
-            self.buttons.append(button)
+            card.grid(row=row, column=col, padx=6, pady=6)
+            card.bind('<Button-1>', lambda e, idx=i: self.onCardClick(idx))
+            self.cards.append(card)
 
         self.resetButton = tk.Button(
             self.root,
@@ -133,43 +134,60 @@ class MemoryGameGUI:
         '''Handle card click events'''
         if self.locked:
             return
+        if self.game.isMatched(index):
+            return
         
+        self.locked = True
+
         wasAlreadyOver = self.game.gameOver
         result = self.game.selectCard(index)
 
-        if result in ('Card already matched', 'Card already flipped', 'Two cards already flipped'):
+        if result in ('Card already flipped', 'Two cards already flipped'):
+            self.locked = False
             return
         if result == 'Game Over' and wasAlreadyOver:
+            self.locked = False
             return
         
         self.revealCard(index)
 
         if result == 'First card flipped':
-            pass
+            self.locked = False
+
         elif result == 'Match':
             for i in self.game.matched:
-                self.disableCard(i)
+                self.lockMatchedCard(i)
             self.updateScoreLabel()
-            self.locked = True
-            self.root.after(800, self.hideUnmatchedCards)
+            self.root.update_idletasks()
+            self.locked = False
+            if self.game.isWinner():
+                messagebox.showinfo('Congratulations!', 'You matched all the cards!')
+                
         elif result == 'No Match':
             self.updateScoreLabel()
-            self.locked = True
             self.root.after(800, self.hideUnmatchedCards)
+
         elif result == 'Game Over':
             self.updateScoreLabel()
-            self.locked = True
             self.root.after(800, self.showGameOver)
 
     def revealCard(self, index):
         '''Reveal the color of the card at the given index'''
-        self.buttons[index].config(state=tk.DISABLED, relief=tk.SUNKEN)
+        cardColor = self.game.getColor(index)
+        self.cards[index].config(bg=cardColor, text='', fg=cardColor, relief=tk.SUNKEN)
+        self.root.update_idletasks()
+
+    def lockMatchedCard(self, index):
+        '''Locks the matched card'''
+        cardColor = self.game.getColor(index)
+        self.cards[index].config(bg=cardColor, text='', fg=cardColor, relief=tk.SUNKEN, cursor='')
     
     def hideUnmatchedCards(self):
         '''Hide the colors of unmatched cards'''
         for i in range(gridSize):
             if not self.game.isMatched(i):
-                self.buttons[i].config(bg='gray', text='?', fg='white')
+                self.cards[i].config(bg='gray', text='?', fg='white', relief=tk.RAISED)
+        self.root.update_idletasks()
         self.locked = False
 
     def updateScoreLabel(self):
@@ -185,9 +203,9 @@ class MemoryGameGUI:
     def onReset(self):
         '''Reset the game and update the UI'''
         self.game.reset()
-        self.lcoked = False
-        for button in self.buttons:
-            button.config(bg='gray', text='?', fg='white', state=tk.NORMAL, relief=tk.RAISED)
+        self.locked = False
+        for card in self.cards:
+            card.config(bg='gray', text='?', fg='white', state=tk.NORMAL, cursor='hand2')
         self.updateScoreLabel()
 
 if __name__ == "__main__":
