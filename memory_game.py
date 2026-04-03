@@ -1,4 +1,6 @@
 import random
+import tkinter as tk
+from tkinter import messagebox
 
 colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'teal']
 gridSize = 16
@@ -79,3 +81,116 @@ class MemoryGame:
     def isFlipped(self, index: int) -> bool:
         '''Check if the card at the given index is flipped'''
         return index in self.flipped
+
+class MemoryGameGUI:
+    '''Create a GUI for the Memory Game using Tkinter'''
+
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Memory Matching Game")
+        self.root.resizable(False, False)
+        self.game = MemoryGame()
+        self.buttons = []
+        self.locked = False
+        self.buildUI()
+
+    def buildUI(self):
+        '''Build the user interface'''
+        self.scoreLabel = tk.Label(
+            self.root,
+            text=f'Score: {self.game.score}',
+            font=('Arial', 14, 'bold')
+        )
+        self.scoreLabel.grid(row=0, column=0, columnspan=4, pady=(12, 4))
+
+        for i in range(gridSize):
+            row = (i // 4) + 1
+            col = i % 4
+            button = tk.Button(
+                self.root,
+                text='',
+                width=8,
+                height=4,
+                bg='gray',
+                fg='white',
+                font=('Arial', 12, 'bold'),
+                relief=tk.RAISED,
+                command=lambda idx=i: self.onCardClick(idx)
+            )
+            button.grid(row=row, column=col, padx=6, pady=6)
+            self.buttons.append(button)
+
+        self.resetButton = tk.Button(
+            self.root,
+            text='Reset',
+            font=('Arial', 12),
+            width=16,
+            command=self.onReset
+        )
+        self.resetButton.grid(row=5, column=0, columnspan=4, pady=(4, 12))
+    
+    def onCardClick(self, index):
+        '''Handle card click events'''
+        if self.locked:
+            return
+        
+        wasAlreadyOver = self.game.gameOver
+        result = self.game.selectCard(index)
+
+        if result in ('Card already matched', 'Card already flipped', 'Two cards already flipped'):
+            return
+        if result == 'Game Over' and wasAlreadyOver:
+            return
+        
+        self.revealCard(index)
+
+        if result == 'First card flipped':
+            pass
+        elif result == 'Match':
+            for i in self.game.matched:
+                self.disableCard(i)
+            self.updateScoreLabel()
+            self.locked = True
+            self.root.after(800, self.hideUnmatchedCards)
+        elif result == 'No Match':
+            self.updateScoreLabel()
+            self.locked = True
+            self.root.after(800, self.hideUnmatchedCards)
+        elif result == 'Game Over':
+            self.updateScoreLabel()
+            self.locked = True
+            self.root.after(800, self.showGameOver)
+
+    def revealCard(self, index):
+        '''Reveal the color of the card at the given index'''
+        self.buttons[index].config(state=tk.DISABLED, relief=tk.SUNKEN)
+    
+    def hideUnmatchedCards(self):
+        '''Hide the colors of unmatched cards'''
+        for i in range(gridSize):
+            if not self.game.isMatched(i):
+                self.buttons[i].config(bg='gray', text='?', fg='white')
+        self.locked = False
+
+    def updateScoreLabel(self):
+        '''Update the score label'''
+        self.scoreLabel.config(text=f'Score: {self.game.score}')
+
+    def showGameOver(self):
+        '''Show a game over message'''
+        self.locked = False
+        messagebox.showinfo('Game Over', 'You ran out of turns. Better luck next time!')
+        self.onReset()
+
+    def onReset(self):
+        '''Reset the game and update the UI'''
+        self.game.reset()
+        self.lcoked = False
+        for button in self.buttons:
+            button.config(bg='gray', text='?', fg='white', state=tk.NORMAL, relief=tk.RAISED)
+        self.updateScoreLabel()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    MemoryGameGUI(root)
+    root.mainloop()
