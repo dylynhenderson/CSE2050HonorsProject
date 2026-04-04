@@ -3,7 +3,7 @@ Python matching memory game to demonstrate honors-level understanding of OOP, GU
 
 ## How to Run
 
-To launch the game, run:
+To launch the game, navigate to the project directory in your terminal and run:
 
 ```
 python memory_game.py
