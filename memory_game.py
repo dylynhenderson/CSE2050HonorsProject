@@ -4,13 +4,22 @@ from tkinter import messagebox
 
 colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'teal']
 gridSize = 16
-startingScore = 20
+
+DIFFICULTY_LIMITS = {
+    'Easy': 20,
+    'Medium': 15,
+    'Hard': 10,
+    'Impossible': 1,
+}
 
 class MemoryGame:
     '''Initialize memory game class'''
-    def __init__(self):
+    def __init__(self, difficulty: str):
+        if difficulty not in DIFFICULTY_LIMITS:
+            raise ValueError(f'Invalid difficulty level: {difficulty}')
+        self._difficulty = difficulty
         self.colors  = []
-        self.score = startingScore
+        self.score = DIFFICULTY_LIMITS[difficulty]
         self.flipped = []
         self.matched = set()
         self.gameOver = False
@@ -54,13 +63,21 @@ class MemoryGame:
                 return 'Game Over'
             return 'No Match'
         
-    def reset(self):
+    def reset(self, difficulty: str = None):
         '''Reset the game'''
-        self.score = startingScore
+        if difficulty is not None:
+            if difficulty not in DIFFICULTY_LIMITS:
+                raise ValueError(f'Invalid difficulty level: {difficulty}')
+            self._difficulty = difficulty
+        self.score = DIFFICULTY_LIMITS[self._difficulty]
         self.flipped = []
         self.matched = set()
         self.gameOver = False
         self.deal()
+
+    def getDifficulty(self) -> str:
+        '''Get the current difficulty level'''
+        return self._difficulty
 
     def isWinner(self) -> bool:
         '''Check if the player has won'''
@@ -89,19 +106,43 @@ class MemoryGameGUI:
         self.root = root
         self.root.title("Memory Matching Game")
         self.root.resizable(False, False)
-        self.game = MemoryGame()
+        self.difficultyVar = tk.StringVar(value='Medium')
+        self.game = MemoryGame('Medium')  # Default difficulty
         self.cards = []
         self.locked = False
         self.buildUI()
 
     def buildUI(self):
         '''Build the user interface'''
+        headerFrame = tk.Frame(self.root)
+        headerFrame.grid(row=0, column=0, columnspan=4, sticky='ew', padx=6, pady=(10, 4))
+        headerFrame.columnconfigure(0, weight=1)
+
         self.scoreLabel = tk.Label(
-            self.root,
+            headerFrame,
             text=f'Score: {self.game.score}',
-            font=('Arial', 14, 'bold')
+            font=('Arial', 14, 'bold'),
+            anchor='w',
         )
-        self.scoreLabel.grid(row=0, column=0, columnspan=4, pady=(12, 4))
+        self.scoreLabel.grid(row=0, column=0, sticky='w')
+
+        difficultyFrame = tk.Frame(headerFrame)
+        difficultyFrame.grid(row=0, column=1, sticky='e')
+
+        tk.Label(
+            difficultyFrame,
+            text='Difficulty:',
+            font=('Arial', 11),
+        ).grid(row=0, column=0, padx=(0, 4))
+
+        difficultyMenu = tk.OptionMenu(
+            difficultyFrame,
+            self.difficultyVar,
+            *DIFFICULTY_LIMITS.keys(),
+            command=self.onDifficultyChange,
+        )
+        difficultyMenu.config(font=('Arial', 11), width=9)
+        difficultyMenu.grid(row=0, column=1)
 
         for i in range(gridSize):
             row = (i // 4) + 1
@@ -130,6 +171,10 @@ class MemoryGameGUI:
         )
         self.resetButton.grid(row=5, column=0, columnspan=4, pady=(4, 12))
     
+    def onDifficultyChange(self, selected: str):
+        '''Handle difficulty change events'''
+        self.doReset(difficulty=selected)
+
     def onCardClick(self, index):
         '''Handle card click events'''
         if self.locked:
@@ -203,6 +248,15 @@ class MemoryGameGUI:
     def onReset(self):
         '''Reset the game and update the UI'''
         self.game.reset()
+        self.locked = False
+        for card in self.cards:
+            card.config(bg='gray', text='?', fg='white', state=tk.NORMAL, cursor='hand2')
+        self.updateScoreLabel()
+
+    def doReset(self, difficulty: str):
+        '''Reset the game with a new difficulty level'''
+        self.game.reset(difficulty=difficulty)
+        self.difficultyVar.set(difficulty)
         self.locked = False
         for card in self.cards:
             card.config(bg='gray', text='?', fg='white', state=tk.NORMAL, cursor='hand2')
