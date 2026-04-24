@@ -460,8 +460,7 @@ class TestReset(unittest.TestCase):
             self.game.reset(difficulty='Ultra')
 
     def test_reset_clears_state_when_difficulty_changes(self):
-        '''Switching difficulty via reset should also clear matched, flipped,
-        and gameOver in addition to updating the score.'''
+        '''Switching difficulty via reset should also clear matched, flipped, and gameOver in addition to updating the score.'''
         self.game.matched = {0, 1}
         self.game.flipped = [2]
         self.game.gameOver = True
